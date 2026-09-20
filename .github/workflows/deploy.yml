@@ -1,0 +1,60 @@
+name: Deploy para produção
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Definir porta SSH
+        run: echo "SSH_PORT=${SSH_PORT:-22}" >> "$GITHUB_ENV"
+
+      - name: Configurar chave SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Adicionar host conhecido
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "${{ env.SSH_PORT }}" -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sincronizar código (sem .env / segredos)
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'node_modules/' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude '*.pem' \
+            --exclude '*.key' \
+            -e "ssh -o StrictHostKeyChecking=yes -p ${{ env.SSH_PORT }}" \
+            ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.APP_PATH }}/"
+
+      - name: Instalar dependências e reiniciar serviço
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ env.SSH_PORT }}
+          script: |
+            set -e
+            cd "${{ secrets.APP_PATH }}"
+            test -f .env || { echo "Arquivo .env ausente no servidor"; exit 1; }
+            npm ci --omit=dev
+            sudo systemctl restart projeto-aplicado
+            sudo systemctl is-active --quiet projeto-aplicado
+            curl -fsS http://127.0.0.1:3000/healthz

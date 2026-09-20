@@ -1,0 +1,25 @@
+{
+  "name": "projeto-aplicado-uncisal",
+  "version": "1.0.0",
+  "description": "Protótipo web Secure by Design - Projeto Aplicado UNCISAL: Práticas de Mercado",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "csrf-csrf": "^3.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "validator": "^13.12.0"
+  }
+}

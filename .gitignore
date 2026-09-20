@@ -1,0 +1,41 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Chaves e credenciais
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.ppk
+credentials.json
+service-account*.json
+
+# Bancos / dados locais
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Logs e runtime
+logs/
+*.log
+npm-debug.log*
+pids/
+*.pid
+
+# Sistema operacional / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Build / cobertura
+coverage/
+dist/
+build/
