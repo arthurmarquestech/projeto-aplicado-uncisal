@@ -177,26 +177,35 @@ sudo systemctl enable --now projeto-aplicado
 
 ### 5. Nginx + HTTPS (Certbot ≥ 5.4, IP público)
 
-1. Ajuste `infra/nginx.conf` substituindo `SEU_IP_PUBLICO`.
-2. Copie para `/etc/nginx/sites-available/projeto` e habilite o site.
-3. Emita o certificado (Let's Encrypt com suporte a IP — veja [anúncio Let's Encrypt](https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability)):
+Para certificado em **IP** (não use `-d` sozinho com o installer nginx):
 
 ```bash
-sudo certbot --nginx -d SEU_IP_PUBLICO
-# ou o fluxo indicado pela documentação atual do Certbot para certificados em IP
-sudo systemctl reload nginx
+sudo certbot certonly \
+  --webroot \
+  --webroot-path /var/www/html \
+  --preferred-profile shortlived \
+  --ip-address 163.176.201.204 \
+  --agree-tos \
+  --register-unsafely-without-email \
+  --non-interactive
 ```
 
-Confirme o redirecionamento HTTP → HTTPS e a renovação automática (`systemctl list-timers | grep certbot` ou `certbot renew --dry-run`).
+Depois configure o Nginx com os arquivos em `/etc/letsencrypt/live/163.176.201.204/` e redirect HTTP→HTTPS.
+
+Confirme a renovação automática: `sudo certbot renew --dry-run` (simulada com sucesso neste projeto).
 
 ### 6. PQC (Post-Quantum Cryptography)
 
-Inclua as diretivas de `infra/nginx-pqc.conf` no server HTTPS (conforme suporte do OpenSSL/Nginx da distro). Valide em:
+Nginx de produção foi recompilado com **OpenSSL 3.5.2** e a diretiva:
 
-- Certificado / IP: [SSL.org Certificate Checker](https://www.ssl.org/) → **Trusted: YES** e algoritmo aceitável
-- PQC: [DigiCert TLS quantum readiness check](https://www.digicert.com/pqc-checker)
+```nginx
+ssl_conf_command Groups X25519MLKEM768:X25519:secp256r1;
+```
 
-Se usar domínio: [Qualys SSL Labs](https://www.ssllabs.com/ssltest/) com **nota A** + suporte PQC.
+Validação:
+
+- Certificado / IP: [SSL.org](https://www.ssl.org/) → **Certificate Trusted: YES** · Good signature / Good key
+- PQC: [DigiCert PQC checker](https://www.digicert.com/pqc-checker) — evidência complementar: `nginx -V` mostra `built with OpenSSL 3.5.2` e a linha `Groups` acima
 
 ### 7. Fail2Ban — verificação
 
@@ -204,7 +213,7 @@ Se usar domínio: [Qualys SSL Labs](https://www.ssllabs.com/ssltest/) com **nota
 sudo fail2ban-client status sshd
 ```
 
-Deve mostrar jail ativo com política de 4 tentativas / banimento de 24h.
+Jail `sshd` ativo com `maxretry=4` e `bantime=86400` (24h).
 
 ---
 
@@ -237,21 +246,22 @@ O desenvolvimento e a auditoria de segurança deste código foram realizados com
 
 ## Checklist de entrega
 
-- [ ] App acessível por IP público (HTTPS)
-- [ ] Nginx com redirect HTTP→HTTPS + Certbot
-- [ ] Testes SSL/PQC ok
-- [ ] SSH só por chave + Fail2Ban (4 erros / 24h)
-- [ ] Repositório GitHub público
-- [ ] `.gitignore` ok — sem segredos commitados
-- [ ] Login + página interna + Logout
-- [ ] README com 3 itens OWASP documentados
-- [ ] Deploy automático via GitHub Actions no `push` para `main`
+- [x] App acessível por IP público (HTTPS)
+- [x] Nginx com redirect HTTP→HTTPS + Certbot (renovação `dry-run` ok)
+- [x] SSL.org Trusted / Good key; PQC via OpenSSL 3.5.2 + `X25519MLKEM768`
+- [x] SSH só por chave + Fail2Ban (4 erros / 24h)
+- [x] Repositório GitHub público
+- [x] `.gitignore` ok — sem segredos commitados
+- [x] Login + página interna (CNES Maceió) + Logout
+- [x] README com 3 itens OWASP documentados
+- [x] Deploy automático via GitHub Actions no `push` para `main`
 
 ---
 
 ## URL de produção
 
-> Preencha após a VM estar no ar:
-
-- **Aplicação:** `https://SEU_IP_PUBLICO/`
-- **Repositório:** `https://github.com/SEU_USUARIO/SEU_REPO`
+- **Aplicação:** https://163.176.201.204/login
+- **Healthcheck:** https://163.176.201.204/healthz
+- **Repositório:** https://github.com/arthurmarquestech/projeto-aplicado-uncisal
+- **CI/CD (exemplo de sucesso):** https://github.com/arthurmarquestech/projeto-aplicado-uncisal/actions
+- **Provedor:** Oracle Cloud Free Tier (São Paulo) — Ubuntu 22.04 · Nginx 1.26.3 (OpenSSL 3.5.2)
